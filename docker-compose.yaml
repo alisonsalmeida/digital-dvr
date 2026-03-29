@@ -29,15 +29,16 @@ services:
     container_name: virtual_dvr_storage
     ports:
       - "9000:9000"
-      - "36211:36211"
+      - "9001:9001"
     environment:
       - MINIO_ROOT_USER=dvr_user
       - MINIO_ROOT_PASSWORD=dvr_pass
+      - MINIO_SERVER_URL=http://${MINIO_HOST}:${MINIO_PORT}
     networks:
       - virtual-dvr-network
     volumes:
       - 'minio-storage:/data'
-    command: ["minio", "server", "/data"]
+    command: ["minio", "server", "/data", "--console-address", ":9001"]
 
 networks:
   virtual-dvr-network:
