@@ -1,13 +1,15 @@
 services:
   virtual-dvr-recorder:
     image: alisonsalmeida/digital-dvr-recorder:latest
-    container_name: digital_dvr_recorder
+    container_name: virtual_dvr_recorder
     depends_on:
       - virtual-dvr-database
       - virtual-dvr-storage
     networks:
       - virtual-dvr-network
     restart: "always"
+    env_file:
+      - ".env"
 
   virtual-dvr-database:
     image: postgres:15-alpine
@@ -39,6 +41,7 @@ services:
     volumes:
       - 'minio-storage:/data'
     command: ["minio", "server", "/data", "--console-address", ":9001"]
+    restart: "always"
 
 networks:
   virtual-dvr-network:

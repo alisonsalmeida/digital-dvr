@@ -10,13 +10,18 @@ import os
 import re
 import aiofiles
 
+user_st = os.getenv('STORAGE_USER')
+pass_st = os.getenv('STORAGE_PASS')
+host_st = os.getenv('STORAGE_HOST')
+port_st = os.getenv('STORAGE_PORT')
+
+url_st = f"http://{host_st}:{port_st}"
 
 MINIO_CONFIG = {
-    "endpoint_url": "http://virtual-dvr-storage:9000",
-    "aws_access_key_id": "dvr_user",
-    "aws_secret_access_key": "dvr_pass",
+    "endpoint_url": url_st,
+    "aws_access_key_id": user_st,
+    "aws_secret_access_key": pass_st,
 }
-
 
 async def get_chunk_duration(filepath) -> int:
     cmd = [
@@ -71,7 +76,7 @@ async def save_video(camera: Camera, path_storage: str, filename: str, record_ti
     duration = await get_chunk_duration(filename)
 
     await VideoChunk.create(
-        record_time=datetime.strptime(record_time_str.replace('.mp4', ''), "%Y-%m-%d_%H-%M-%S"),
+        record_time=datetime.strptime(record_time_str.replace('.ts', ''), "%Y-%m-%d_%H-%M-%S"),
         duration=duration,
         path=filename,
         url=path_storage,
@@ -82,7 +87,7 @@ async def save_video(camera: Camera, path_storage: str, filename: str, record_ti
     os.remove(filename)
 
 async def task_monitor_output(camera: Camera, stdout: asyncio.StreamReader):
-    pattern = re.compile(r"Opening '(.+?)' for writing")
+    pattern = re.compile(r"Opening '(.+?\.ts)' for writing")
     first = True
     last_video_chunk: Optional[str] = None
 
@@ -126,16 +131,11 @@ async def task_camera_manager(camera: Camera, chunk_size: int = 10):
     if not os.path.isdir(path):
         os.makedirs(path)
 
-    """
-    ffmpeg -rtsp_transport udp -buffer_size 1024000 -i "rtsp://admin:27121414As@192.168.1.8:554/onvif1" \
-    -c:v copy -c:a aac -f segment -segment_time 15 -strftime 1 \
-    "gravacoes/%Y-%m-%d_%H-%M-%S.mp4"
-    """
-
     cmd = [
         "ffmpeg", "-rtsp_transport", "udp", "-buffer_size", "1024000",  "-i", camera.rtsp_url,
-        "-c:v", "copy", "-c:a", "aac", "-f", "segment", "-segment_time", str(chunk_size), "-strftime", "1",
-        f"{path}/%Y-%m-%d_%H-%M-%S.mp4"
+        "-c:v", "copy", "-c:a", "aac", "-f", "hls", "-hls_time", str(chunk_size), "-hls_list_size", "0",
+        "-hls_segment_type", "mpegts", "-strftime", "1", "-hls_segment_filename", f"{path}/%Y-%m-%d_%H-%M-%S.ts",
+        "-loglevel", "info", f"{path}/playlist_temp.m3u8"
     ]
 
     while True:
@@ -153,7 +153,13 @@ async def task_camera_manager(camera: Camera, chunk_size: int = 10):
 
 
 async def main():
-    url = 'asyncpg://dvr_user:dvr_pass@virtual-dvr-database:5432/VIRTUAL_DVR'
+    user = os.getenv("DATABASE_USER")
+    password = os.getenv("DATABASE_PASS")
+    host = os.getenv("DATABASE_HOST")
+    port = os.getenv("DATABASE_PORT")
+    database = os.getenv("DATABASE_NAME")
+
+    url = f'asyncpg://{user}:{password}@{host}:{port}/{database}'
     await Tortoise.init(db_url=url, modules={"models": ["src.models"]})
     await Tortoise.generate_schemas()
 

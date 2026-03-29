@@ -2,3 +2,6 @@ venv/
 records/
 **/__pycache__/*
 .idea/
+
+
+*.m3u8

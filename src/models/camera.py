@@ -1,4 +1,6 @@
 from tortoise import fields, models
+from pydantic import BaseModel
+from datetime import datetime
 
 
 class Camera(models.Model):
@@ -16,3 +18,13 @@ class Camera(models.Model):
 
     def __str__(self):
         return f"Camera {self.slug}: {self.name}"
+
+
+class CameraModel(BaseModel):
+    id: int
+    name: str
+    slug: str
+    rtsp_url: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
