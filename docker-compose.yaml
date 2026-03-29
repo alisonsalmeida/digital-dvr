@@ -1,0 +1,48 @@
+services:
+  virtual-dvr-recorder:
+    image: alisonsalmeida/digital-dvr-recorder:latest
+    container_name: digital_dvr_recorder
+    depends_on:
+      - virtual-dvr-database
+      - virtual-dvr-storage
+    networks:
+      - virtual-dvr-network
+    restart: "always"
+
+  virtual-dvr-database:
+    image: postgres:15-alpine
+    container_name: virtual_dvr_database
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=dvr_user
+      - POSTGRES_PASSWORD=dvr_pass
+      - POSTGRES_DB=VIRTUAL_DVR
+    restart: "always"
+    volumes:
+      - "/var/virtual-dvr-data:/var/lib/postgresql/data"
+    networks:
+      - virtual-dvr-network
+
+  virtual-dvr-storage:
+    image: minio/minio:latest
+    container_name: virtual_dvr_storage
+    ports:
+      - "9000:9000"
+      - "36211:36211"
+    environment:
+      - MINIO_ROOT_USER=dvr_user
+      - MINIO_ROOT_PASSWORD=dvr_pass
+    networks:
+      - virtual-dvr-network
+    volumes:
+      - 'minio-storage:/data'
+    command: ["minio", "server", "/data"]
+
+networks:
+  virtual-dvr-network:
+    external: true
+
+volumes:
+  minio-storage:
+    external: true
