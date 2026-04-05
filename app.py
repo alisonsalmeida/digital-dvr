@@ -14,6 +14,7 @@ user_st = os.getenv('STORAGE_USER')
 pass_st = os.getenv('STORAGE_PASS')
 host_st = os.getenv('STORAGE_HOST')
 port_st = os.getenv('STORAGE_PORT')
+bucket_st = os.getenv('STORAGE_BUCKET')
 
 url_st = f"http://{host_st}:{port_st}"
 
@@ -61,7 +62,7 @@ async def save_video(camera: Camera, path_storage: str, filename: str, record_ti
                 content = await fd.read()
 
             await s3.put_object(
-                Bucket='cameras',
+                Bucket=bucket_st,
                 Key=path_storage,
                 Body=content,
                 ContentType="video/mp4"
