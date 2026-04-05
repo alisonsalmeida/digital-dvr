@@ -1,6 +1,6 @@
 services:
   virtual-dvr-recorder:
-    image: alisonsalmeida/digital-dvr-recorder:latest
+    image: alisonsalmeida/digital-dvr-recorder:1.1.0
     container_name: virtual_dvr_recorder
     depends_on:
       - virtual-dvr-database
@@ -56,6 +56,8 @@ services:
     environment:
       - CANDIDATE=192.168.1.111
     command: ./objs/srs -c conf/rtmp2rtc.conf
+    networks:
+      - virtual-dvr-network
 
 networks:
   virtual-dvr-network:
