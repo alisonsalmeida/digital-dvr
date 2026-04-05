@@ -1,6 +1,6 @@
 services:
   virtual-dvr-recorder:
-    image: alisonsalmeida/digital-dvr-recorder:1.1.0
+    image: alisonsalmeida/digital-dvr-recorder:1.1.1
     container_name: virtual_dvr_recorder
     depends_on:
       - virtual-dvr-database
