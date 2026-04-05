@@ -125,8 +125,12 @@ async def task_monitor_output(camera: Camera, stdout: asyncio.StreamReader):
             last_video_chunk = path_file
 
 async def task_camera_manager(camera: Camera, chunk_size: int = 10):
+    rtmp_host = os.getenv("WEBRTC_HOST")
+    rtmp_port = os.getenv("WEBRTC_PORT")
+
     path = f'records/{camera.slug}'
     name = camera.name
+    url_rtmp = f"rtmp://{rtmp_host}:{rtmp_port}/live/{camera.slug}"
 
     if not os.path.isdir(path):
         os.makedirs(path)
@@ -135,7 +139,8 @@ async def task_camera_manager(camera: Camera, chunk_size: int = 10):
         "ffmpeg", "-rtsp_transport", "udp", "-buffer_size", "1024000",  "-i", camera.rtsp_url,
         "-c:v", "copy", "-c:a", "aac", "-f", "hls", "-hls_time", str(chunk_size), "-hls_list_size", "0",
         "-hls_segment_type", "mpegts", "-strftime", "1", "-hls_segment_filename", f"{path}/%Y-%m-%d_%H-%M-%S.ts",
-        "-loglevel", "info", f"{path}/playlist_temp.m3u8"
+        "-loglevel", "info", f"{path}/playlist_temp.m3u8", "-c:v", "copy", "-c:a", "aac", "-f", "flv",
+        url_rtmp
     ]
 
     while True:
@@ -147,7 +152,7 @@ async def task_camera_manager(camera: Camera, chunk_size: int = 10):
         task_monitor = asyncio.create_task(task_monitor_output(camera, process.stderr))
         await process.wait()
 
-        print(f"[{name}] FFmpeg stream reader ended, restarted")
+        print(f"[{name}] FFmpeg stream reader ended, restarted: {process.returncode}")
         task_monitor.cancel()
         await asyncio.sleep(2)
 

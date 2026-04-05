@@ -40,15 +40,17 @@ async def show(request: Request, camera_id: int):
     end_dt = start_time + timedelta(hours=1)
 
     chunks = VideoChunk.filter(record_time__range=(start_dt, end_dt), camera=camera_id).all()
-    lines = [
-        "#EXTM3U",
-        "#EXT-X-VERSION:7",
-        "#EXT-X-MEDIA-SEQUENCE:0",
-        "#EXT-X-TARGETDURATION:13"
-        "#EXT-X-PLAYLIST-TYPE:VOD",  # Indica que é uma gravação (Video On Demand)
-    ]
+    count = await chunks.count()
+
+    if count == 0:
+        return response.text(
+            "\n".join("#EXTM3U\n#EXT-X-TARGETDURATION:0\n#EXT-X-ENDLIST"),
+            content_type="application/vnd.apple.mpegurl"
+        )
 
     session = aioboto3.Session()
+    max_duration = 0
+    urls = []
 
     async for chunk in chunks:
         async with session.client('s3', **MINIO_CONFIG) as s3:
@@ -58,10 +60,22 @@ async def show(request: Request, camera_id: int):
                 ExpiresIn=3600  # 1 hour
             )
             print(f"Presigned URL: {url}")
-            lines.append(f"#EXTINF:{(chunk.duration / 1000):.3f},")
-            lines.append(url)
+            if chunk.duration > max_duration:
+                max_duration = chunk.duration
 
+            urls.append(f"#EXTINF:{(chunk.duration / 1000):.3f},")
+            urls.append(url)
+
+    lines = [
+        "#EXTM3U",
+        "#EXT-X-VERSION:3",
+        f"#EXT-X-TARGETDURATION:{int(max_duration / 1000) + 1}",
+        "#EXT-X-MEDIA-SEQUENCE:0",
+        "#EXT-X-PLAYLIST-TYPE:VOD",
+    ]
+    lines.extend(urls)
     lines.append("#EXT-X-ENDLIST")
+
     return response.text(
         "\n".join(lines),
         content_type="application/vnd.apple.mpegurl"

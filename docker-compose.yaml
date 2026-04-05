@@ -5,6 +5,7 @@ services:
     depends_on:
       - virtual-dvr-database
       - virtual-dvr-storage
+      - virtual-dvr-live
     networks:
       - virtual-dvr-network
     restart: "always"
@@ -35,13 +36,26 @@ services:
     environment:
       - MINIO_ROOT_USER=dvr_user
       - MINIO_ROOT_PASSWORD=dvr_pass
-      - MINIO_SERVER_URL=http://${MINIO_HOST}:${MINIO_PORT}
+      - MINIO_SERVER_URL=http://192.168.1.111:9000
     networks:
       - virtual-dvr-network
     volumes:
       - 'minio-storage:/data'
     command: ["minio", "server", "/data", "--console-address", ":9001"]
     restart: "always"
+
+  virtual-dvr-live:
+    image: ossrs/srs:5
+    container_name: virtual_dvr_live
+    restart: unless-stopped
+    ports:
+      - "1935:1935"   # RTMP
+      - "1985:1985"   # HTTP API
+      - "8080:8080"   # HTTP Server / HLS / Console
+      - "8000:8000/udp" # WebRTC
+    environment:
+      - CANDIDATE=192.168.1.111
+    command: ./objs/srs -c conf/rtmp2rtc.conf
 
 networks:
   virtual-dvr-network:
